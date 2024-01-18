@@ -28,5 +28,7 @@
 * twitter: [@haru_tank](https://twitter.com/haru_tank)
  
 # License
+
 Copyright (c) 2024 H. Toyama 
+
 [MIT license](https://en.wikipedia.org/wiki/MIT_License).
