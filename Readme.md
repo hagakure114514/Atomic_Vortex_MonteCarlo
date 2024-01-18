@@ -25,7 +25,7 @@
  
 * やわ　
 * Tokyo Tech
-* twitter: @haru_tank
+* twitter: [@haru_tank](https://twitter.com/haru_tank)
  
 # License
 
