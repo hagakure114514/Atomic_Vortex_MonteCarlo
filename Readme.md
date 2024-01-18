@@ -23,12 +23,12 @@
  
 # Author
  
-* H. Toyama　
+* hagakure114514
 * Tokyo Tech
 * twitter: [@haru_tank](https://twitter.com/haru_tank)
  
 # License
 
-Copyright (c) 2024 H. Toyama 
+Copyright (c) 2024 hagakure114514
 
 [MIT license](https://en.wikipedia.org/wiki/MIT_License).
