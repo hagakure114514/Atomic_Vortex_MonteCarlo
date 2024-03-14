@@ -93,9 +93,14 @@ void DressedAtom::process_dipole(atom* obj)
 // dissipative force
 void DressedAtom::process_diss(atom* obj)
 {
-	if (spontaneous_emission(obj) == 1) {		// spontaneous emission occur
+	int sp=spontaneous_emission(obj);
+	if (sp == 1) {		// spontaneous emission occur
 		recoil_diss(obj);
 		count_sp++;
+	}else if(sp==2){
+		recoil_diss(obj);
+		recoil_diss(obj);
+		count_sp+=2;
 	}
 
 }
@@ -218,33 +223,36 @@ void DressedAtom::force_dip(atom* obj)
 
 
 // spontaneou semission hanbetu
-bool DressedAtom::spontaneous_emission(atom* obj)
+int DressedAtom::spontaneous_emission(atom* obj)
 {
 	std::mt19937 rand_src(std::random_device{}());
 	std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-	bool p;
+	int p;
 	double psp = dist(rand_src);
 
 	if (obj->s == state::d1) {
 		double p1 = 1.0 - exp(-gamma * s1(obj->radius) * dt / 2.0);
-		p = psp<=p1 ? 1 : 0;
+		double p1_twice = p1 * (1.0 - 2.0 / (gamma * s1(obj->radius) * dt ) * p1);
+		p = psp<=p1 ? (psp<=p1_twice ? 2 : 1) : 0;
 	}
 	else if (obj->s == state::d2) {
 		double p2 = 1.0 - exp(-gamma * s2(obj->radius) * dt / 2.0);
-		p = psp<=p2 ? 1 : 0;
+		double p2_twice = p2 * ( 1.0 - 2.0 / (gamma * s2(obj->radius) * dt) * p2);
+		p = psp<=p2 ? (psp<=p2_twice ? 2 : 1) : 0;
 	}
 	else {
 		double p_diss = dist(rand_src);
 		if (p_diss <= branch) {
 			obj->s = state::d1;
 			double p1 = 1.0 - exp(-gamma * s1(obj->radius) * dt / 2.0);
-			p = psp<=p1 ? 1 : 0;
+			double p1_twice = p1 * (1.0 - 2.0 / (gamma * s1(obj->radius) * dt ) * p1);
+			p = psp<=p1 ? (psp<=p1_twice ? 2 : 1) : 0;
 		}
 		else {
-			obj->s = state::d2;
 			double p2 = 1.0 - exp(-gamma * s2(obj->radius) * dt / 2.0);
-			p = psp<=p2 ? 1 : 0;
+			double p2_twice = p2 * ( 1.0 - 2.0 / (gamma * s2(obj->radius) * dt) * p2);
+			p = psp<=p2 ? (psp<=p2_twice ? 2 : 1) : 0;
 		}
 	}
 	return p;
@@ -294,7 +302,7 @@ void DressedAtom::recoil_diss(atom* obj)
 			obj->s = state::d1;
 		}else{
 			// To |2,n-1>
-			// Sisyphus cooling
+			// Intensity gradient cooling
 			obj->s = state::d2;
 
 			double uopt1 = 2.0/3.0 * hbar * detuning / 2.0 * log(1.0+s1(obj->radius));
@@ -310,7 +318,18 @@ void DressedAtom::recoil_diss(atom* obj)
 	}else{
 		if (p_recoil <= branch) {
 			// To |1,n-1>
+			// Intensity Gradient heating
 			obj->s = state::d1;
+
+			double uopt1 = 2.0/3.0 * hbar * detuning / 2.0 * log(1.0+s1(obj->radius));
+			double uopt2 = 2.0/3.0 * hbar * (detuning + delta_hfs) / 2.0 * log(1.0+s2(obj->radius));
+			double dK = uopt1 - uopt2;
+			double K_r = 1.0/2.0 * mass * ((obj->v.vx*cos(obj->phi))*(obj->v.vx*cos(obj->phi))+(obj->v.vy*sin(obj->phi))*(obj->v.vy*sin(obj->phi)));
+			double tau = K_r+dK > 0? (K_r+dK)/K_r : 0.0;
+
+			// Kinetic energy increasing
+			obj->v.vx *= (cos(obj->phi)*cos(obj->phi)*tau+sin(obj->phi)*sin(obj->phi));
+			obj->v.vy *= (cos(obj->phi)*cos(obj->phi)+sin(obj->phi)*sin(obj->phi)*tau);
 		}else{
 			// To |2,n-1>
 			obj->s = state::d2;
