@@ -23,10 +23,12 @@
  
 # Author
  
-* やわ　
+* hagakure114514
 * Tokyo Tech
-* twitter: @haru_tank
+* twitter: [@haru_tank](https://twitter.com/haru_tank)
  
 # License
+
+Copyright (c) 2024 hagakure114514
 
 [MIT license](https://en.wikipedia.org/wiki/MIT_License).
