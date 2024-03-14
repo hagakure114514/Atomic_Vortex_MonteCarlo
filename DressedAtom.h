@@ -37,10 +37,11 @@ private:
 	double grad_s2(double x);										// gradient of saturation parameter between |g2> and |e>
 	void force_dip(atom* obj);										// Optical potential
 	int spontaneous_emission(atom* obj);							// spontaneous emission
+
 	void recoil_diss(atom* obj);									// recoil of spontaneous emission
 	bool repump_emission(atom* obj);							// spontaneous emission
 	void recoil_diss_pm(atom* obj);									// recoil of spontaneous emission
-
+	double s1_pm(double x);											// saturation parameter between |g2> and |e> of repump
 	double s2_pm(double x);											// saturation parameter between |g2> and |e> of repump
 
 	void dip_sin2(double* x);										// random sin^2 x

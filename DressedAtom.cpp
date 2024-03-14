@@ -13,7 +13,10 @@ DressedAtom::DressedAtom()
 // Repump
 void DressedAtom::process_repump(atom* obj)
 {
-		if (repump_emission(obj) == 1) {		// spontaneous emission occur in Repump beam
+
+
+	int sp = repump_emission(obj);
+	if (sp == 1) {		// spontaneous emission occur in Repump beam
 		recoil_diss_pm(obj);
 		count_sp++;
 	}
@@ -29,17 +32,19 @@ bool DressedAtom::repump_emission(atom* obj)
 	double psp_pm = dist(rand_src);
 
 	if (obj->s == state::d1) {
-		p_pm = 0;
+		double p1 = (1.0 - exp( - gamma * s1_pm(obj->radius) * dt / 2.0));
+		p_pm = psp_pm<=p1 ? 1 : 0;
 
 	}else if (obj->s == state::d2) {
-		double p2 = branch * (1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0));
+		double p2 = (1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0));
 		p_pm = psp_pm<=p2 ? 1 : 0;
 	}
 	else {
 		double p_diss = dist(rand_src);
 		if (p_diss <= branch) {
 			obj->s = state::d1;
-			p_pm=0;
+			double p1 = (1.0 - exp( - gamma * s1_pm(obj->radius) * dt / 2.0));
+			p_pm = psp_pm<=p1 ? 1 : 0;
 		}
 		else {
 			obj->s = state::d2;
@@ -58,6 +63,7 @@ void DressedAtom::recoil_diss_pm(atom* obj)
 	
 	double sp_psi_pm = 2.0 * M_PI * dist(rand_src);
 	double sp_theata_pm = M_PI * dist(rand_src);
+	double trans_pm = dist(rand_src);
 
 	if(flag_sp == 2) {
 		// dipole radiation direction
@@ -74,7 +80,7 @@ void DressedAtom::recoil_diss_pm(atom* obj)
 		obj->v.vz += - hbar * k_wave / mass + hbar * k_wave * cos(sp_theata_pm) / mass;
 	}
 
-	obj->s = state::d1;
+	obj->s = trans_pm<=branch ? state::d1 : state::d2;
 }
 
 
@@ -369,6 +375,15 @@ void DressedAtom::dip_sin2(double* x) {
 ///////////////////////////////////// Functions for a repump beam //////////////////////////////////////////////
 
 // saturation parameter between |g2> and |e>
+double DressedAtom::s1_pm(double x)
+{
+	// Gaussian Electric Field: E0 *exp(-r^2/w0_pm^2)
+	double ints_pm = 2.0 * I0_pm * x * x / (w0_pm * w0_pm) * exp(-2.0 * x * x / (w0_pm * w0_pm));			// intensity [V/m]
+	double s_pm = ints_pm / (I_s1 * (1.0 + 4.0 * (detuning_pm + delta_hfs) * (detuning_pm + delta_hfs) / (gamma1 * gamma1)));
+
+	return s_pm;
+}
+
 double DressedAtom::s2_pm(double x)
 {
 	// Gaussian Electric Field: E0 *exp(-r^2/w0_pm^2)
