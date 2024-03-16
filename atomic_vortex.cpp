@@ -19,7 +19,7 @@ int main()
 	std::cin >> flag_mode;
 
 	// spontaneous emission mode  
-	printf("select spontaneous emission mode?\n 1:no OAM, 2:dipole-radiation, 3:all direction, 4:all direction(coherent OAM rad.)\n");
+	printf("select spontaneous emission mode?\n 1:no OAM, 2:dipole-radiation, 3:all direction\n");
 	std::cin >> flag_sp_tmp;
 
 	if (flag_mode == 0) {

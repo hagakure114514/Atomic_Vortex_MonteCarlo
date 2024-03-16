@@ -39,7 +39,7 @@ private:
 	int spontaneous_emission(atom* obj);							// spontaneous emission
 
 	void recoil_diss(atom* obj);									// recoil of spontaneous emission
-	bool repump_emission(atom* obj);							// spontaneous emission
+	int repump_emission(atom* obj);							// spontaneous emission
 	void recoil_diss_pm(atom* obj);									// recoil of spontaneous emission
 	double s1_pm(double x);											// saturation parameter between |g2> and |e> of repump
 	double s2_pm(double x);											// saturation parameter between |g2> and |e> of repump

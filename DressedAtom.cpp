@@ -14,44 +14,66 @@ DressedAtom::DressedAtom()
 void DressedAtom::process_repump(atom* obj)
 {
 
-
 	int sp = repump_emission(obj);
-	if (sp == 1) {		// spontaneous emission occur in Repump beam
+	if (sp == 1) {					// spontaneous emission occur in Repump beam
 		recoil_diss_pm(obj);
 		count_sp++;
+	}else if(sp==2){
+		recoil_diss_pm(obj);
+		recoil_diss_pm(obj);
+		count_sp+=2;
 	}
 }
 
 // spontaneou semission hanbetu
-bool DressedAtom::repump_emission(atom* obj)
+int DressedAtom::repump_emission(atom* obj)
 {
 	std::mt19937 rand_src(std::random_device{}());
 	std::uniform_real_distribution<double> dist(0.0, 1.0);
 
-	bool p_pm;
+	int p_pm = 0;
 	double psp_pm = dist(rand_src);
+	double trans_pm = dist(rand_src);
 
-	if (obj->s == state::d1) {
-		double p1 = (1.0 - exp( - gamma * s1_pm(obj->radius) * dt / 2.0));
-		p_pm = psp_pm<=p1 ? 1 : 0;
+	// To ignore an atom transition from state |1>
+	if (obj->s == state::d2) {
+		double p2_pm = 1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0);
+		p_pm = psp_pm<=p2_pm ? 1 : 0;
 
-	}else if (obj->s == state::d2) {
-		double p2 = (1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0));
-		p_pm = psp_pm<=p2 ? 1 : 0;
+		if(p_pm == 1){
+			obj->s = trans_pm<=branch ? state::d1 : state::d2;
+
+			double trans_2 = dist(rand_src);
+			double p2_twice_pm = trans_2<=branch ? 1.0-2.0/(gamma*s1_pm(obj->radius)*dt)*(1.0-exp(-gamma*s1_pm(obj->radius)*dt/2.0))-2.0/(gamma*s2_pm(obj->radius)*dt)*(1.0-exp(-gamma*s2_pm(obj->radius)*dt/2.0))-2.0/(gamma*(s2_pm(obj->radius)-s1_pm(obj->radius))*dt)*(exp(-gamma*s2_pm(obj->radius)*dt/2.0)-exp(-gamma*s1_pm(obj->radius)*dt/2.0)) : 1.0+exp(-gamma*s2_pm(obj->radius)*dt/2.0)-4.0/(gamma*s2_pm(obj->radius)*dt)*p2_pm;
+			if(psp_pm<=p2_twice_pm){
+				p_pm = 2;
+				obj->s = trans_2<=branch ? state::d1 : state::d2;
+			}
+		}
 	}
 	else {
 		double p_diss = dist(rand_src);
 		if (p_diss <= branch) {
 			obj->s = state::d1;
-			double p1 = (1.0 - exp( - gamma * s1_pm(obj->radius) * dt / 2.0));
-			p_pm = psp_pm<=p1 ? 1 : 0;
 		}
 		else {
 			obj->s = state::d2;
-			double p2 = branch * (1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0));
-			p_pm = psp_pm <=p2 ? 1 : 0;
+			double p2_pm = 1.0 - exp( - gamma * s2_pm(obj->radius) * dt / 2.0);
+			p_pm = psp_pm <=p2_pm ? 1 : 0;
+
+			if(p_pm == 1){
+				obj->s = trans_pm<=branch ? state::d1 : state::d2;
+
+				double trans_2 = dist(rand_src);
+				double p2_twice_pm = trans_2<=branch ? 1.0-2.0/(gamma*s1_pm(obj->radius)*dt)*(1.0-exp(-gamma*s1_pm(obj->radius)*dt/2.0))-2.0/(gamma*s2_pm(obj->radius)*dt)*(1.0-exp(-gamma*s2_pm(obj->radius)*dt/2.0))-2.0/(gamma*(s2_pm(obj->radius)-s1_pm(obj->radius))*dt)*(exp(-gamma*s2_pm(obj->radius)*dt/2.0)-exp(-gamma*s1_pm(obj->radius)*dt/2.0)) : 1.0+exp(-gamma*s2_pm(obj->radius)*dt/2.0)-4.0/(gamma*s2_pm(obj->radius)*dt)*p2_pm;
+				if(psp_pm<=p2_twice_pm){
+					p_pm = 2;
+					obj->s = trans_2<=branch ? state::d1 : state::d2;
+				}
+			}
 		}
 	}
+	obj->s_pre = obj->s;
 	return p_pm;
 }
 
@@ -63,7 +85,6 @@ void DressedAtom::recoil_diss_pm(atom* obj)
 	
 	double sp_psi_pm = 2.0 * M_PI * dist(rand_src);
 	double sp_theata_pm = M_PI * dist(rand_src);
-	double trans_pm = dist(rand_src);
 
 	if(flag_sp == 2) {
 		// dipole radiation direction
@@ -79,8 +100,6 @@ void DressedAtom::recoil_diss_pm(atom* obj)
 		obj->v.vy += hbar * k_wave * sin(sp_theata_pm) * sin(sp_psi_pm) / mass;
 		obj->v.vz += - hbar * k_wave / mass + hbar * k_wave * cos(sp_theata_pm) / mass;
 	}
-
-	obj->s = trans_pm<=branch ? state::d1 : state::d2;
 }
 
 
@@ -108,7 +127,6 @@ void DressedAtom::process_diss(atom* obj)
 		recoil_diss(obj);
 		count_sp+=2;
 	}
-
 }
 
 
@@ -236,29 +254,72 @@ int DressedAtom::spontaneous_emission(atom* obj)
 
 	int p;
 	double psp = dist(rand_src);
+	double trans = dist(rand_src);
+
 
 	if (obj->s == state::d1) {
 		double p1 = 1.0 - exp(-gamma * s1(obj->radius) * dt / 2.0);
-		double p1_twice = p1 * (1.0 - 2.0 / (gamma * s1(obj->radius) * dt ) * p1);
-		p = psp<=p1 ? (psp<=p1_twice ? 2 : 1) : 0;
+		p = psp<=p1 ? 1 : 0;
+
+		if(p == 1){
+			obj->s = trans<=branch ? state::d1 : state::d2;
+
+			double trans_2 = dist(rand_src);
+			double p1_twice = trans_2<=branch ? 1.0+exp(-gamma*s1(obj->radius)*dt/2.0)-4.0/(gamma*s1(obj->radius)*dt)*p1 : 1.0-2.0/(gamma*s1(obj->radius)*dt)*(1.0-exp(-gamma*s1(obj->radius)*dt/2.0))-2.0/(gamma*s2(obj->radius)*dt)*(1.0-exp(-gamma*s2(obj->radius)*dt/2.0))-2.0/(gamma*(s1(obj->radius)-s2(obj->radius))*dt)*(exp(-gamma*s1(obj->radius)*dt/2.0)-exp(-gamma*s2(obj->radius)*dt/2.0));
+			if(psp<=p1_twice){
+				p = 2;
+				obj->s = trans_2<=branch ? state::d1 : state::d2;
+			}
+		}
 	}
 	else if (obj->s == state::d2) {
 		double p2 = 1.0 - exp(-gamma * s2(obj->radius) * dt / 2.0);
-		double p2_twice = p2 * ( 1.0 - 2.0 / (gamma * s2(obj->radius) * dt) * p2);
-		p = psp<=p2 ? (psp<=p2_twice ? 2 : 1) : 0;
+		p = psp<=p2 ? 1 : 0;
+
+		if(p == 1){
+			obj->s = trans<=branch ? state::d1 : state::d2;
+
+			double trans_2 = dist(rand_src);
+			double p2_twice = trans_2<=branch ? 1.0-2.0/(gamma*s1(obj->radius)*dt)*(1.0-exp(-gamma*s1(obj->radius)*dt/2.0))-2.0/(gamma*s2(obj->radius)*dt)*(1.0-exp(-gamma*s2(obj->radius)*dt/2.0))-2.0/(gamma*(s2(obj->radius)-s1(obj->radius))*dt)*(exp(-gamma*s2(obj->radius)*dt/2.0)-exp(-gamma*s1(obj->radius)*dt/2.0)) : 1.0+exp(-gamma*s2(obj->radius)*dt/2.0)-4.0/(gamma*s2(obj->radius)*dt)*p2;
+			if(psp<=p2_twice){
+				p = 2;
+				obj->s = trans_2<=branch ? state::d1 : state::d2;
+			}
+		}
 	}
 	else {
 		double p_diss = dist(rand_src);
 		if (p_diss <= branch) {
 			obj->s = state::d1;
 			double p1 = 1.0 - exp(-gamma * s1(obj->radius) * dt / 2.0);
-			double p1_twice = p1 * (1.0 - 2.0 / (gamma * s1(obj->radius) * dt ) * p1);
-			p = psp<=p1 ? (psp<=p1_twice ? 2 : 1) : 0;
+			p = psp<=p1 ? 1 : 0;
+
+			if(p == 1){
+				obj->s = trans<=branch ? state::d1 : state::d2;
+
+				double trans_2 = dist(rand_src);
+				double p1_twice = trans_2<=branch ? 1.0+exp(-gamma*s1(obj->radius)*dt/2.0)-4.0/(gamma*s1(obj->radius)*dt)*p1 : 1.0-2.0/(gamma*s1(obj->radius)*dt)*(1.0-exp(-gamma*s1(obj->radius)*dt/2.0))-2.0/(gamma*s2(obj->radius)*dt)*(1.0-exp(-gamma*s2(obj->radius)*dt/2.0))-2.0/(gamma*(s1(obj->radius)-s2(obj->radius))*dt)*(exp(-gamma*s1(obj->radius)*dt/2.0)-exp(-gamma*s2(obj->radius)*dt/2.0));
+				if(psp<=p1_twice){
+					p = 2;
+					obj->s = trans_2<=branch ? state::d1 : state::d2;
+				}
+			}
 		}
 		else {
+			obj->s = state::d2;
 			double p2 = 1.0 - exp(-gamma * s2(obj->radius) * dt / 2.0);
-			double p2_twice = p2 * ( 1.0 - 2.0 / (gamma * s2(obj->radius) * dt) * p2);
-			p = psp<=p2 ? (psp<=p2_twice ? 2 : 1) : 0;
+			p = psp<=p2 ? 1 : 0;
+
+			if(p == 1){
+				obj->s = trans<=branch ? state::d1 : state::d2;
+
+				double trans_2 = dist(rand_src);
+				double p2_twice = trans_2<=branch ? 1.0-2.0/(gamma*s1(obj->radius)*dt)*(1.0-exp(-gamma*s1(obj->radius)*dt/2.0))-2.0/(gamma*s2(obj->radius)*dt)*(1.0-exp(-gamma*s2(obj->radius)*dt/2.0))-2.0/(gamma*(s2(obj->radius)-s1(obj->radius))*dt)*(exp(-gamma*s2(obj->radius)*dt/2.0)-exp(-gamma*s1(obj->radius)*dt/2.0)) : 1.0+exp(-gamma*s2(obj->radius)*dt/2.0)-4.0/(gamma*s2(obj->radius)*dt)*p2;
+				if(psp<=p2_twice){
+					p = 2;
+					obj->s = trans_2<=branch ? state::d1 : state::d2;
+				}
+			}
 		}
 	}
 	return p;
@@ -288,12 +349,6 @@ void DressedAtom::recoil_diss(atom* obj)
 		obj->v.vx += -hbar * k_wave * cos(sp_theata + obj->phi - M_PI / 2.0) * cos(sp_psi) / mass;
 		obj->v.vy += -hbar * k_wave * sin(sp_theata + obj->phi - M_PI / 2.0) * cos(sp_psi) / mass;
 		obj->v.vz += hbar * k_wave / mass - hbar * k_wave * sin(sp_psi) / mass;
-	}else if(flag_sp == 4){
-		// all directio (coherent OAM radiation)
-		obj->l_rot += hbar * (double)l * 2.0;
-		obj->v.vx += - hbar * k_wave * sin(sp_theata) * cos(sp_psi) / mass;
-		obj->v.vy += - hbar * k_wave * sin(sp_theata) * sin(sp_psi) / mass;
-		obj->v.vz += hbar * k_wave / mass - hbar * k_wave * cos(sp_theata) / mass;
 	}else{
 		// default
 		obj->l_rot +=  hbar * (double)l;
@@ -302,15 +357,11 @@ void DressedAtom::recoil_diss(atom* obj)
 		obj->v.vz += hbar * k_wave / mass - hbar * k_wave * cos(sp_theata) / mass;
 	}
 
-	if (obj->s == state::d1) {
-		if (p_recoil <= branch) {
-			// To |1,n-1>
-			obj->s = state::d1;
-		}else{
+	if (obj->s_pre == state::d1) {
+		if (obj->s == state::d2) {
 			// To |2,n-1>
 			// Intensity gradient cooling
-			obj->s = state::d2;
-
+			
 			double uopt1 = 2.0/3.0 * hbar * detuning / 2.0 * log(1.0+s1(obj->radius));
 			double uopt2 = 2.0/3.0 * hbar * (detuning + delta_hfs) / 2.0 * log(1.0+s2(obj->radius));
 			double dK = uopt1 - uopt2;
@@ -322,10 +373,9 @@ void DressedAtom::recoil_diss(atom* obj)
 			obj->v.vy *= (cos(obj->phi)*cos(obj->phi)+sin(obj->phi)*sin(obj->phi)*tau);
 		}
 	}else{
-		if (p_recoil <= branch) {
+		if (obj->s == state::d1) {
 			// To |1,n-1>
 			// Intensity Gradient heating
-			obj->s = state::d1;
 
 			double uopt1 = 2.0/3.0 * hbar * detuning / 2.0 * log(1.0+s1(obj->radius));
 			double uopt2 = 2.0/3.0 * hbar * (detuning + delta_hfs) / 2.0 * log(1.0+s2(obj->radius));
@@ -336,9 +386,6 @@ void DressedAtom::recoil_diss(atom* obj)
 			// Kinetic energy increasing
 			obj->v.vx *= (cos(obj->phi)*cos(obj->phi)*tau+sin(obj->phi)*sin(obj->phi));
 			obj->v.vy *= (cos(obj->phi)*cos(obj->phi)+sin(obj->phi)*sin(obj->phi)*tau);
-		}else{
-			// To |2,n-1>
-			obj->s = state::d2;
 		}
 	}
 }
@@ -379,7 +426,7 @@ double DressedAtom::s1_pm(double x)
 {
 	// Gaussian Electric Field: E0 *exp(-r^2/w0_pm^2)
 	double ints_pm = 2.0 * I0_pm * x * x / (w0_pm * w0_pm) * exp(-2.0 * x * x / (w0_pm * w0_pm));			// intensity [V/m]
-	double s_pm = ints_pm / (I_s1 * (1.0 + 4.0 * (detuning_pm + delta_hfs) * (detuning_pm + delta_hfs) / (gamma1 * gamma1)));
+	double s_pm = ints_pm / (I_s1 * (1.0 + 4.0 * (detuning_pm - delta_hfs) * (detuning_pm - delta_hfs) / (gamma1 * gamma1)));
 
 	return s_pm;
 }

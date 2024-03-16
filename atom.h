@@ -10,6 +10,7 @@ public:
 	velocity v;			// center-of-mass motion velocity
 	velocity v_pre;		// center-of-mass motion velocity
 	state s;
+	state s_pre;
 	double radius;
 	double phi;
 	double acc_x, acc_y;

@@ -38,7 +38,7 @@ const double v_max = 0.15*sqrt(temp/10e-6);
 
 //===Simulation conditions=================================================================================================================================
 const int SAMPLE = 1000;											//number of sample atoms[-]
-const int jloop = 20000;										//how many times the time t is advanced[-]
+const int jloop = 50000;										//how many times the time t is advanced[-]
 const double dt = 5.0e-5;											//interval time[s]
 
 
