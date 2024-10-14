@@ -24,7 +24,7 @@
  
 # Author
  
-* hagakure114514
+* H. Toyama
 * Tokyo Tech
 * twitter: [@haru_tank](https://twitter.com/haru_tank)
  
